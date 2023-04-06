@@ -4,13 +4,21 @@
     <button @click="addText">Add</button>
     <div>
       <div class="topics-container">
-        <button v-for="(topic, index) in topicList" :key="index" class="topic-button">{{ topic }}</button>
+        <button v-for="(topic, index) in topicList" :key="index" class="topic-button" @click="openPopup(topic)">
+          {{ topic }}
+        </button>
       </div>
     </div>
     <div>
       <p v-for="(text, index) in textList" :key="index" class="text-item">
         {{ text }}
       </p>
+    </div>
+
+    <div v-if="popupVisible" class="popup">
+      <h2>{{ selectedTopic }}</h2>
+      <p>Here's some information about {{ selectedTopic }}...</p>
+      <button @click="closePopup">Close</button>
     </div>
   </div>
 </template>
@@ -21,7 +29,9 @@ export default {
     return {
       newText: "",
       textList: [],
-      topicList: []
+      topicList: [],
+      popupVisible: false,
+      selectedTopic: "",
     };
   },
   created() {
@@ -68,7 +78,17 @@ export default {
             console.error(error);
           });
       }
-    }
+    },
+
+    openPopup(topic) {
+      this.popupVisible = true;
+      this.selectedTopic = topic;
+    },
+
+    closePopup() {
+      this.popupVisible = false;
+      this.selectedTopic = "";
+    },
   }
 };
 </script>
@@ -85,5 +105,16 @@ export default {
 
 .topic-button {
   margin-right: 10px;
+}
+
+.popup {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: white;
+  border: 1px solid black;
+  padding: 20px;
+  z-index: 999;
 }
 </style>
