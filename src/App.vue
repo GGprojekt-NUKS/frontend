@@ -1,25 +1,21 @@
 <template>
   <div>
-    <input v-model="newText" placeholder="Enter new text" />
-    <button @click="addText">Add</button>
+    <h1>FORUM</h1>
     <div>
-      <div class="topics-container">
-        <button v-for="(topic, index) in topicList" :key="index" class="topic-button" @click="openPopup(topic)">
-          {{ topic }}
-        </button>
-      </div>
+      <h2>Pick a topic:</h2>
+      <select id="textDropdown" v-model="selectedTopicId" @change="loadTexts">
+        <option v-for="item in items" :value="item.id" :key="item.id">{{ item.topic }}</option>
+      </select>
+      <br>
     </div>
     <div>
-      <p v-for="(text, index) in textList" :key="index" class="text-item">
-        {{ text }}
-      </p>
+      <h2>Add new text:</h2>
+      <input type="text" id="newText" v-model="newText">
+      <button @click="saveText">Save</button>
     </div>
-
-    <div v-if="popupVisible" class="popup">
-      <h2>{{ selectedTopic }}</h2>
-      <p>Here's some information about {{ selectedTopic }}...</p>
-      <button @click="closePopup">Close</button>
-    </div>
+    <ul>
+      <li v-for="text in textList" :key="text.id">{{ text.text }}</li>
+    </ul>
   </div>
 </template>
 
@@ -27,94 +23,47 @@
 export default {
   data() {
     return {
-      newText: "",
+      items: [],
+      selectedTopicId: 0,
+      newText: '',
       textList: [],
-      topicList: [],
-      popupVisible: false,
-      selectedTopic: "",
     };
   },
   created() {
-    // Make an API call to get all previous texts and update the textList property
-    fetch("http://195.47.197.24:8000/text_list")
-      .then(response => response.json())
-      .then(data => {
-        this.textList = data;
-      })
-      .catch(error => {
-        console.error(error);
-      });
-
-    // Make an API call to get all previous topics and update the topicList property
-    fetch("http://195.47.197.24:8000/topic_list")
-      .then(response => response.json())
-      .then(data => {
-        this.topicList = data;
-      })
-      .catch(error => {
-        console.error(error);
-      });
+    // Load topics from server on component creation
+    this.loadTopics();
   },
   methods: {
-    addText() {
-      if (this.newText) {
-        // Make an API call to add the new text
-        fetch("http://195.47.197.24:8000/add", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({ text: this.newText })
-        })
-          .then(response => {
-            if (!response.ok) {
-              throw new Error("Failed to add text");
-            }
-            // Update the textList property with the new text
-            this.textList.push(this.newText);
-            this.newText = "";
-          })
-          .catch(error => {
-            console.error(error);
-          });
+    async loadTopics() {
+      // Send GET request to /topic_list to load topics from server
+      const response = await fetch('http://localhost:8000/topic_list');
+      const data = await response.json();
+      this.items = data.map((topic, index) => {
+        return { id: index + 1, topic: topic };
+      });
+    },
+    async loadTexts() {
+      // Send GET request to /texts_by_topic with selected topic ID to load texts from server
+      const response = await fetch(`http://localhost:8000/texts_by_topic/${this.selectedTopicId}`);
+      const data = await response.json();
+      this.textList = data;
+    },
+    async saveText() {
+      // Send POST request to /add to save new text to server
+      const response = await fetch('http://localhost:8000/add', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ text: this.newText, topic_id: this.selectedTopicId}),
+      });
+      if (response.ok) {
+        this.newText = '';
+        this.loadTexts();
+      } else {
+        console.error('Failed to save text:', response.statusText);
       }
     },
-
-    openPopup(topic) {
-      this.popupVisible = true;
-      this.selectedTopic = topic;
-    },
-
-    closePopup() {
-      this.popupVisible = false;
-      this.selectedTopic = "";
-    },
-  }
+  },
 };
 </script>
-
-<style>
-.text-item {
-  border: 1px solid black;
-  padding: 10px;
-}
-
-.topics-container {
-  margin-bottom: 10px;
-}
-
-.topic-button {
-  margin-right: 10px;
-}
-
-.popup {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background-color: white;
-  border: 1px solid black;
-  padding: 20px;
-  z-index: 999;
-}
-</style>
